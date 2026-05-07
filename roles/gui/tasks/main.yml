@@ -21,6 +21,24 @@
     name: google-chrome-stable
     update_cache: true
     state: present
+    
+# ── Chrome Extensions ──
+- name: Создать директорию политик Chrome
+  file:
+    path: /etc/opt/chrome/policies/managed
+    state: directory
+    mode: '0755'
+
+- name: Добавить политику принудительной установки расширений
+  copy:
+    dest: /etc/opt/chrome/policies/managed/extensions.json
+    mode: '0644'
+    content: |
+      {
+        "ExtensionInstallForcelist": [
+          "pfnededegaaopdmhkdmcofjmoldfiped;https://clients2.google.com/service/update2/crx"
+        ]
+      }
 
 # ── Dropbox ──
 - name: Добавить GPG-ключ Dropbox
