@@ -1,0 +1,83 @@
+---
+# ─────────────────────────────────────────
+# GUI-ПРИЛОЖЕНИЯ
+# ─────────────────────────────────────────
+
+# ── Chrome ──
+- name: Добавить GPG-ключ Google Chrome
+  get_url:
+    url: https://dl.google.com/linux/linux_signing_key.pub
+    dest: /usr/share/keyrings/google-chrome.asc
+    mode: '0644'
+
+- name: Добавить репозиторий Google Chrome
+  apt_repository:
+    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.asc] https://dl.google.com/linux/chrome/deb/ stable main"
+    filename: google-chrome
+    state: present
+
+- name: Установить Google Chrome
+  apt:
+    name: google-chrome-stable
+    update_cache: true
+    state: present
+
+# ── Dropbox ──
+- name: Добавить GPG-ключ Dropbox
+  get_url:
+    url: https://linux.dropbox.com/fedora/rpm-public-key.asc
+    dest: /usr/share/keyrings/dropbox.asc
+    mode: '0644'
+
+- name: Добавить репозиторий Dropbox
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/dropbox.asc] https://linux.dropbox.com/ubuntu focal main"
+    filename: dropbox
+    state: present
+
+- name: Установить Dropbox
+  apt:
+    name: dropbox
+    update_cache: true
+    state: present
+
+# ── KeePassXC (PPA) ──
+- name: Добавить PPA KeePassXC
+  apt_repository:
+    repo: ppa:phoerious/keepassxc
+    state: present
+
+- name: Установить KeePassXC
+  apt:
+    name: keepassxc
+    update_cache: true
+    state: present
+
+# ── Obsidian ──
+- name: Получить последнюю версию Obsidian
+  uri:
+    url: https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest
+    return_content: true
+  register: obsidian_release
+
+- name: Скачать Obsidian .deb
+  get_url:
+    url: "{{ obsidian_release.json.assets | selectattr('name', 'match', '.*amd64\\.deb$') | map(attribute='browser_download_url') | first }}"
+    dest: /tmp/obsidian.deb
+
+- name: Установить Obsidian
+  apt:
+    deb: /tmp/obsidian.deb
+
+# ── Zed ──
+- name: Скачать установщик Zed
+  get_url:
+    url: https://zed.dev/install.sh
+    dest: /tmp/zed_install.sh
+    mode: '0755'
+
+- name: Установить Zed
+  command: /tmp/zed_install.sh
+  become_user: "{{ target_user }}"
+  args:
+    creates: "{{ target_home }}/.local/bin/zed"

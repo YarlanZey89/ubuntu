@@ -1,0 +1,72 @@
+---
+# ─────────────────────────────────────────
+# DEVOPS / ИНФРАСТРУКТУРА
+# ─────────────────────────────────────────
+
+# ── kubectl (официальный репозиторий k8s) ──
+- name: Добавить GPG-ключ kubectl
+  get_url:
+    url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
+    dest: /usr/share/keyrings/kubernetes-apt-keyring.asc
+    mode: '0644'
+
+- name: Добавить репозиторий kubectl
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/kubernetes-apt-keyring.asc] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /"
+    filename: kubernetes
+    state: present
+
+- name: Установить kubectl
+  apt:
+    name: kubectl
+    update_cache: true
+    state: present
+
+# ── k9s (последний .deb с GitHub) ──
+- name: Получить последнюю версию k9s
+  uri:
+    url: https://api.github.com/repos/derailed/k9s/releases/latest
+    return_content: true
+  register: k9s_release
+
+- name: Скачать k9s .deb
+  get_url:
+    url: "{{ k9s_release.json.assets | selectattr('name', 'match', '.*linux_amd64\\.deb$') | map(attribute='browser_download_url') | first }}"
+    dest: /tmp/k9s.deb
+
+- name: Установить k9s
+  apt:
+    deb: /tmp/k9s.deb
+
+# ── tsh (Teleport client) — бинарник с GitHub Releases ──
+# Источник: https://github.com/gravitational/teleport/releases
+# Архив содержит tsh, tctl, teleport — устанавливаем только tsh
+
+- name: Получить последнюю версию Teleport с GitHub
+  uri:
+    url: https://api.github.com/repos/gravitational/teleport/releases/latest
+    return_content: true
+  register: teleport_release
+
+- name: Скачать архив Teleport (linux amd64)
+  get_url:
+    url: "{{ teleport_release.json.assets | selectattr('name', 'match', '.*linux-amd64-bin\\.tar\\.gz$') | map(attribute='browser_download_url') | first }}"
+    dest: /tmp/teleport.tar.gz
+
+- name: Создать директорию для распаковки Teleport
+  file:
+    path: /tmp/teleport_extracted
+    state: directory
+
+- name: Распаковать архив Teleport
+  unarchive:
+    src: /tmp/teleport.tar.gz
+    dest: /tmp/teleport_extracted
+    remote_src: true
+
+- name: Установить только бинарник tsh в /usr/local/bin
+  copy:
+    src: /tmp/teleport_extracted/teleport/tsh
+    dest: /usr/local/bin/tsh
+    mode: '0755'
+    remote_src: true
