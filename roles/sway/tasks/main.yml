@@ -1,0 +1,61 @@
+---
+# ─────────────────────────────────────────
+# SWAY — ОКРУЖЕНИЕ
+# ─────────────────────────────────────────
+
+- name: Установить пакеты Sway-окружения
+  apt:
+    name:
+      - sway
+      - waybar
+      - rofi
+      - sway-notification-center
+      - libgtk-3-dev
+      - libglib2.0-dev
+      - libgtk-layer-shell-dev
+      - golang
+    state: present
+
+# ── nwg-dock (сборка из исходников) ──
+- name: Клонировать репозиторий nwg-dock
+  git:
+    repo: https://github.com/nwg-piotr/nwg-dock
+    dest: /tmp/nwg-dock
+    version: main
+
+- name: Собрать nwg-dock
+  command: make build
+  args:
+    chdir: /tmp/nwg-dock
+    creates: /tmp/nwg-dock/nwg-dock
+
+- name: Установить nwg-dock
+  command: make install
+  args:
+    chdir: /tmp/nwg-dock
+    creates: /usr/local/bin/nwg-dock
+
+# ── JetBrainsMono Nerd Font ──
+- name: Создать директорию для шрифтов
+  file:
+    path: "{{ target_home }}/.local/share/fonts/JetBrainsMonoNerd"
+    state: directory
+    owner: "{{ target_user }}"
+    mode: '0755'
+
+- name: Скачать JetBrainsMono Nerd Font
+  get_url:
+    url: https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+    dest: /tmp/JetBrainsMono.zip
+
+- name: Распаковать шрифты
+  unarchive:
+    src: /tmp/JetBrainsMono.zip
+    dest: "{{ target_home }}/.local/share/fonts/JetBrainsMonoNerd"
+    remote_src: true
+    owner: "{{ target_user }}"
+
+- name: Обновить кэш шрифтов
+  command: fc-cache -fv
+  become_user: "{{ target_user }}"
+  changed_when: false

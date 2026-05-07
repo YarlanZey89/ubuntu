@@ -1,0 +1,13 @@
+---
+- name: Настройка рабочей станции
+  hosts: local
+  become: true
+  vars:
+    target_user: "{{ ansible_env.SUDO_USER | default(ansible_env.USER) }}"
+    target_home: "/home/{{ target_user }}"
+
+  roles:
+    - system
+    - gui
+    - sway
+    - devops
