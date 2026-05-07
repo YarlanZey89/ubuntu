@@ -3,7 +3,7 @@
 # SWAY — ОКРУЖЕНИЕ
 # ─────────────────────────────────────────
 
-- name: Установить зависимости для сборки SwayFX
+- name: Установить зависимости для сборки SwayFX и wlroots
   apt:
     name:
       - waybar
@@ -13,34 +13,69 @@
       - libglib2.0-dev
       - libgtk-layer-shell-dev
       - golang
-      # Зависимости для сборки SwayFX (meson + wlroots и др.)
+      # Инструменты сборки
       - meson
       - ninja-build
       - pkg-config
+      - git
+      - cmake
+      # Wayland
       - libwayland-dev
-      - libwlroots-dev
+      - wayland-protocols
       - libxkbcommon-dev
+      # Графика
       - libcairo2-dev
       - libpango1.0-dev
       - libgles2-mesa-dev
       - libegl-dev
       - libdrm-dev
       - libgbm-dev
+      - libgl-dev
+      # Ввод
       - libinput-dev
       - libpixman-1-dev
+      # XCB / XWayland
       - libxcb-composite0-dev
       - libxcb-icccm4-dev
       - libxcb-image0-dev
       - libxcb-render0-dev
       - libxcb-xfixes0-dev
-      - libxcb-xinput-dev
+      - libxcb-xinput0
       - libx11-xcb-dev
       - libxwayland-dev
+      # Прочее
       - seatd
       - libseat-dev
       - libjson-c-dev
       - libpcre2-dev
     state: present
+
+# ── wlroots (сборка из исходников) ──
+- name: Клонировать репозиторий wlroots
+  git:
+    repo: https://gitlab.freedesktop.org/wlroots/wlroots.git
+    dest: /tmp/wlroots
+    version: "0.17"
+
+- name: Настроить сборку wlroots (meson)
+  command: meson setup build --prefix=/usr/local
+  args:
+    chdir: /tmp/wlroots
+    creates: /tmp/wlroots/build/build.ninja
+
+- name: Собрать wlroots (ninja)
+  command: ninja -C build
+  args:
+    chdir: /tmp/wlroots
+
+- name: Установить wlroots
+  command: ninja -C build install
+  args:
+    chdir: /tmp/wlroots
+
+- name: Обновить ldconfig после установки wlroots
+  command: ldconfig
+  changed_when: false
 
 # ── SwayFX (сборка из исходников) ──
 - name: Клонировать репозиторий SwayFX
@@ -54,18 +89,18 @@
   args:
     chdir: /tmp/swayfx
     creates: /tmp/swayfx/build/build.ninja
+  environment:
+    PKG_CONFIG_PATH: /usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig
 
 - name: Собрать SwayFX (ninja)
   command: ninja -C build
   args:
     chdir: /tmp/swayfx
-    creates: /tmp/swayfx/build/sway
 
 - name: Установить SwayFX
   command: ninja -C build install
   args:
     chdir: /tmp/swayfx
-    creates: /usr/local/bin/sway
 
 # ── nwg-dock (сборка из исходников) ──
 - name: Клонировать репозиторий nwg-dock
