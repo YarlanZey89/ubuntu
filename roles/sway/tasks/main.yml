@@ -59,16 +59,46 @@
     version: "0.5.3"
     force: true
 
-- name: Настроить сборку SwayFX с подпроектами (wlroots + scenefx встроены)
+- name: Удалить старую build-директорию SwayFX если есть
+  file:
+    path: /tmp/swayfx/build
+    state: absent
+
+- name: Создать директорию subprojects SwayFX
+  file:
+    path: /tmp/swayfx/subprojects
+    state: directory
+    mode: '0755'
+
+- name: Клонировать scenefx 0.4.1 как подпроект SwayFX
+  git:
+    repo: https://github.com/wlrfx/scenefx
+    dest: /tmp/swayfx/subprojects/scenefx
+    version: "0.4.1"
+    force: true
+
+- name: Создать директорию subprojects внутри scenefx
+  file:
+    path: /tmp/swayfx/subprojects/scenefx/subprojects
+    state: directory
+    mode: '0755'
+
+- name: Клонировать wlroots (ветка 0.19, свежий коммит с фиксом libinput)
+  git:
+    repo: https://gitlab.freedesktop.org/wlroots/wlroots.git
+    dest: /tmp/swayfx/subprojects/scenefx/subprojects/wlroots
+    version: "0.19"          # берём HEAD ветки 0.19, а не тег 0.19.0
+    force: true
+
+- name: Настроить сборку SwayFX
   command: >
     meson setup build
     --prefix=/usr/local
-    --wrap-mode=forcefallback
-    -Dxwayland=enabled
+    --wrap-mode=default
+    --force-fallback-for=scenefx,wlroots
     -Dsd-bus-provider=basu
   args:
     chdir: /tmp/swayfx
-    creates: /tmp/swayfx/build/build.ninja
 
 - name: Собрать SwayFX
   command: ninja -C build
@@ -83,6 +113,7 @@
 - name: Обновить ldconfig после установки SwayFX
   command: ldconfig
   changed_when: false
+
 
 # ── nwg-dock (сборка из исходников) ──
 - name: Клонировать репозиторий nwg-dock
