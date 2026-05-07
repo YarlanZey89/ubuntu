@@ -3,10 +3,9 @@
 # SWAY — ОКРУЖЕНИЕ
 # ─────────────────────────────────────────
 
-- name: Установить пакеты Sway-окружения
+- name: Установить зависимости для сборки SwayFX
   apt:
     name:
-      - sway
       - waybar
       - rofi
       - sway-notification-center
@@ -14,7 +13,59 @@
       - libglib2.0-dev
       - libgtk-layer-shell-dev
       - golang
+      # Зависимости для сборки SwayFX (meson + wlroots и др.)
+      - meson
+      - ninja-build
+      - pkg-config
+      - libwayland-dev
+      - libwlroots-dev
+      - libxkbcommon-dev
+      - libcairo2-dev
+      - libpango1.0-dev
+      - libgles2-mesa-dev
+      - libegl-dev
+      - libdrm-dev
+      - libgbm-dev
+      - libinput-dev
+      - libpixman-1-dev
+      - libxcb-composite0-dev
+      - libxcb-icccm4-dev
+      - libxcb-image0-dev
+      - libxcb-render0-dev
+      - libxcb-xfixes0-dev
+      - libxcb-xinput-dev
+      - libx11-xcb-dev
+      - libxwayland-dev
+      - seatd
+      - libseat-dev
+      - libjson-c-dev
+      - libpcre2-dev
     state: present
+
+# ── SwayFX (сборка из исходников) ──
+- name: Клонировать репозиторий SwayFX
+  git:
+    repo: https://github.com/WillPower3309/swayfx
+    dest: /tmp/swayfx
+    version: master
+
+- name: Настроить сборку SwayFX (meson)
+  command: meson setup build --prefix=/usr/local
+  args:
+    chdir: /tmp/swayfx
+    creates: /tmp/swayfx/build/build.ninja
+
+- name: Собрать SwayFX (ninja)
+  command: ninja -C build
+  args:
+    chdir: /tmp/swayfx
+    creates: /tmp/swayfx/build/sway
+
+- name: Установить SwayFX
+  command: ninja -C build install
+  args:
+    chdir: /tmp/swayfx
+    creates: /usr/local/bin/sway
 
 # ── nwg-dock (сборка из исходников) ──
 - name: Клонировать репозиторий nwg-dock
