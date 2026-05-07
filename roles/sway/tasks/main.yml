@@ -1,9 +1,10 @@
 ---
 # ─────────────────────────────────────────
-# SWAY — ОКРУЖЕНИЕ
+# SWAYFX — ОКРУЖЕНИЕ (Ubuntu 26)
+# SwayFX 0.5.3 / wlroots 0.19.0 / scenefx 0.4.1
 # ─────────────────────────────────────────
 
-- name: Установить зависимости для сборки SwayFX и wlroots
+- name: Установить зависимости для сборки SwayFX
   apt:
     name:
       - waybar
@@ -15,84 +16,61 @@
       - golang
       # Инструменты сборки
       - meson
-      - ninja-build
       - pkg-config
-      - git
       - cmake
+      - git
+      - scdoc
       # Wayland
-      - libwayland-dev
       - wayland-protocols
-      - libxkbcommon-dev
-      # Графика
-      - libcairo2-dev
+      - libwayland-dev
+      - libpcre2-dev
+      - libjson-c-dev
+      # Графика и рендеринг
       - libpango1.0-dev
-      - libgles2-mesa-dev
-      - libegl-dev
+      - libcairo2-dev
+      - libgdk-pixbuf-2.0-dev
       - libdrm-dev
       - libgbm-dev
-      - libgl-dev
-      # Ввод
-      - libinput-dev
+      - libgles2-mesa-dev
       - libpixman-1-dev
-      # XCB / XWayland
-      - libxcb-composite0-dev
-      - libxcb-icccm4-dev
-      - libxcb-image0-dev
-      - libxcb-render0-dev
-      - libxcb-xfixes0-dev
-      - libxcb-xinput0
-      - libx11-xcb-dev
-      - libxwayland-dev
-      # Прочее
-      - seatd
+      # Ввод и сиденье
+      - libinput-dev
       - libseat-dev
-      - libjson-c-dev
-      - libpcre2-dev
+      - libxkbcommon-dev
+      # XCB
+      - libxcb-dri3-dev
+      - libxcb-present-dev
+      - libxcb-res0-dev
+      - libxcb-render-util0-dev
+      - libxcb-ewmh-dev
+      - libxcb-icccm4-dev
+      # Новые зависимости wlroots 0.19
+      - libliftoff-dev
+      - libdisplay-info-dev
+      - liblcms2-dev
     state: present
+    update_cache: true
 
-# ── wlroots (сборка из исходников) ──
-- name: Клонировать репозиторий wlroots
-  git:
-    repo: https://gitlab.freedesktop.org/wlroots/wlroots.git
-    dest: /tmp/wlroots
-    version: "0.17"
-
-- name: Настроить сборку wlroots (meson)
-  command: meson setup build --prefix=/usr/local
-  args:
-    chdir: /tmp/wlroots
-    creates: /tmp/wlroots/build/build.ninja
-
-- name: Собрать wlroots (ninja)
-  command: ninja -C build
-  args:
-    chdir: /tmp/wlroots
-
-- name: Установить wlroots
-  command: ninja -C build install
-  args:
-    chdir: /tmp/wlroots
-
-- name: Обновить ldconfig после установки wlroots
-  command: ldconfig
-  changed_when: false
-
-# ── SwayFX (сборка из исходников) ──
-- name: Клонировать репозиторий SwayFX
+# ── SwayFX 0.5.3 (сборка из исходников с подпроектами meson) ──
+- name: Клонировать репозиторий SwayFX 0.5.3
   git:
     repo: https://github.com/WillPower3309/swayfx
     dest: /tmp/swayfx
-    version: master
+    version: "0.5.3"
+    force: true
 
-- name: Настроить сборку SwayFX (meson)
-  command: meson setup build --prefix=/usr/local
+- name: Настроить сборку SwayFX с подпроектами (wlroots + scenefx встроены)
+  command: >
+    meson setup build
+    --prefix=/usr/local
+    --wrap-mode=forcefallback
+    -Dxwayland=enabled
+    -Dsd-bus-provider=basu
   args:
     chdir: /tmp/swayfx
     creates: /tmp/swayfx/build/build.ninja
-  environment:
-    PKG_CONFIG_PATH: /usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig
 
-- name: Собрать SwayFX (ninja)
+- name: Собрать SwayFX
   command: ninja -C build
   args:
     chdir: /tmp/swayfx
@@ -101,6 +79,10 @@
   command: ninja -C build install
   args:
     chdir: /tmp/swayfx
+
+- name: Обновить ldconfig после установки SwayFX
+  command: ldconfig
+  changed_when: false
 
 # ── nwg-dock (сборка из исходников) ──
 - name: Клонировать репозиторий nwg-dock
